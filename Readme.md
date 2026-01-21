@@ -1,3 +1,21 @@
+# FixitHub
+
+A microservices-based issue tracking system inspired by Jira.
+
+## Tech Stack
+- Next.js + Tailwind
+- Node.js Microservices
+- FastAPI
+- Docker & Docker Compose
+
+## Services
+- API Gateway
+- Auth Service
+- User Service
+- Project Service
+- Issue Service
+
+
 ## Activity Diagram
 ![UML Diagram](https://img.plantuml.biz/plantuml/dpng/NL7DJiCm3BxdANpiJjop0wi6Xw4nqD107BF4wmnj4iKfyFWuRJGcRl7tPpjUSJOfZqElfeTIUeyTSSO4Dx0D7VcbqWUMiXtp6NqcQp8w0Ly9l-7EyFaOJ190qGcQTKAXOIVKSmeVQFFj0eeFcdVaXGBGLLBfPO4s_ei4Acsu02MfOgsr6ANX_nXnjSvD5iZXEWrxHcXseQfgpXuBNmONXNTqKjSw_H38m_sFB4w--qkRbKe_HMbTKNWBwPEZiIYVK9VPC8-bR9cfytDPndh4uOX9YEA1u2_2GtGN7xnaaqTPNC_bEWonnsbMEKg8QYLZo8L-0G00)
 
