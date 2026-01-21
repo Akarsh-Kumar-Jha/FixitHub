@@ -1,0 +1,31 @@
+services:
+  auth_service:
+    build: ./services/auth-service
+    container_name: auth_service-container
+    ports:
+      - "5001:5001"
+  user_service:
+    build: ./services/user-service
+    container_name: user_service_container
+    ports:
+      - "5002:5002"
+  issue_service:
+    build: ./services/issue-service
+    container_name: issue_service_container
+    ports:
+      - "5003:5004"
+  project_service:
+    build: ./services/project-service
+    container_name: project_service_container
+    ports:
+      - "5004:5003"
+  api_gateway:
+    build: ./api-gateway
+    container_name: api_gateway_container
+    ports:
+      - "5000:4000"
+    depends_on:
+      - auth_service
+      - user_service
+      - issue_service
+      - project_service
