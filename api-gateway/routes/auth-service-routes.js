@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const axios = require("axios");
+const { authenticateUser } = require('../middlewares/authMiddleware');
+require('dotenv').config();
 
 
 router.post('/register',async(req,res) => {
@@ -41,8 +43,8 @@ router.post('/login',async(req,res) => {
 
   try {
   const response = await axios.post(url,data);
-  console.log('Response of login In Api Gateway==',response);
- return res.cookie('token',response.data.token,{httpOnly:true}).json({
+  console.log('Response of login In Api Gateway==',response.data.token);
+ return res.cookie('token',response.data.token,{httpOnly:true,expires:new Date(Date.now() + 24*60*60*1000)}).json({
   success:true,
   message:"User logged In successfully In ApiGateway✅",
   data:response.data
@@ -63,6 +65,13 @@ router.post('/logout',(req,res) => {
   res.json({
     success:true,
     message:"User logged Out successfully In ApiGateway✅",
+  });
+});
+
+router.get('/private',authenticateUser,(req,res) => {
+  res.json({
+    success:true,
+    message:"Private route accessed successfully In ApiGateway✅",
   });
 });
 

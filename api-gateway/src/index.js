@@ -4,6 +4,7 @@ const cookieParser = require("cookie-parser");
 const authServiceRoutes = require('../routes/auth-service-routes');
 const app = express();
 
+require("dotenv").config();
 app.use(cors({
   origin: "http://localhost:3000",
   credentials: true
