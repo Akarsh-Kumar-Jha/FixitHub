@@ -2,6 +2,8 @@ services:
   auth_service:
     build: ./services/auth-service
     container_name: auth_service-container
+    env_file:
+      - ./services/auth-service/.env
     ports:
       - "5001:5001"
   user_service:

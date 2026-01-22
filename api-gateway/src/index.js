@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-
+const authServiceRoutes = require('../routes/auth-service-routes');
 const app = express();
 
 app.use(cors({
@@ -22,6 +22,8 @@ app.use(logger);
 app.get("/health", (req, res) => {
   res.json({ status: "API Gateway running" });
 });
+
+app.use('/auth',authServiceRoutes);
 
 app.listen(4000, () => {
   console.log("API Gateway on port 4000");
