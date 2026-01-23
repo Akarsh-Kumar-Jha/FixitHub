@@ -19,6 +19,8 @@ services:
   project_service:
     build: ./services/project-service
     container_name: project_service_container
+    env_file:
+      - ./services/project-service/.env
     ports:
       - "5004:5003"
   api_gateway:

@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const axios = require("axios");
 
 exports.createUser = async(req,res) => {
     try {
@@ -32,14 +33,30 @@ exports.createUser = async(req,res) => {
         });
 
 
+        console.log('Naya User Ban Gya In Auth-service abb In User-Service.........');
+try {
+    const userResponse = await axios.post('http://user_service:5002/users/create-user',{
+        id:newUser._id,
+        username:newUser.username,
+        email
+    });
         return res.status(201).json(
             {
                 success:true,
                 message:"User created successfully✅",
-                user:newUser
+                user:newUser,
+                user_service_res:userResponse.data
             }
         );
-
+} catch (error) {
+    return res.status(500).json(
+        {
+            success:false,
+            message:"Something went wrong In User-Service",
+            error:error
+        }
+    )
+}
         
     } catch (error) {
         console.log('err occuered in auth controller',error);

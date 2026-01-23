@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const authServiceRoutes = require('../routes/auth-service-routes');
+const userServiceRoutes = require('../routes/user-service-routes');
 const app = express();
 
 require("dotenv").config();
@@ -25,6 +26,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use('/auth',authServiceRoutes);
+app.use('/users',userServiceRoutes);
 
 app.listen(4000, () => {
   console.log("API Gateway on port 4000");

@@ -72,6 +72,7 @@ router.get('/private',authenticateUser,(req,res) => {
   res.json({
     success:true,
     message:"Private route accessed successfully In ApiGateway✅",
+    data:req.user
   });
 });
 
