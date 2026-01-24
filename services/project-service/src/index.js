@@ -1,23 +1,10 @@
 const express = require("express");
-const { Pool } = require("pg");
+const projectRouter = require('../routes/ProjectRoute');
+const pool = require("../config/db");
 
 const app = express();
 app.use(express.json());
 require('dotenv').config();
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
-
-pool.on('connect', () => {
-  console.log('connected to the postgres database✅');
-});
-pool.on('error', (err) => {
-  console.error('error connecting to the database', err);
-});
 
 app.get("/health", (req, res) => {
   res.json({ status: "Project Service running" });
@@ -35,6 +22,7 @@ try {
 }
 });
 
+app.use('/projects',projectRouter);
 app.listen(5003, () => {
   console.log("Project Service on port 5003");
 });
