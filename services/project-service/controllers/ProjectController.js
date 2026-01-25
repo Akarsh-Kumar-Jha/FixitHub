@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const axios = require("axios");
 
 exports.createProject = async (req, res) => {
   try {
@@ -52,23 +53,19 @@ exports.createProject = async (req, res) => {
         "error occuered while creating project in postgres db",
         error,
       );
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message: "Something went wrong in createProject controller IN DB",
-          error,
-        });
+      return res.status(500).json({
+        success: false,
+        message: "Something went wrong in createProject controller IN DB",
+        error,
+      });
     }
   } catch (error) {
     console.log("Error Occuered in createProject Controller", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Something went wrong in createProject controller",
-        error,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong in createProject controller",
+      error,
+    });
   }
 };
 
@@ -93,24 +90,160 @@ exports.getProjects = async (req, res) => {
              ON pm.project_id = p.id
              WHERE pm.user_id = $1
             `,
-            [userId]
+      [userId],
     );
     return res.status(200).json({
-        success:true,
-        message:"Projects fetched successfully",
-        data:results.rows
+      success: true,
+      message: "Projects fetched successfully",
+      data: results.rows,
     });
   } catch (error) {
     console.error(
       "error occuered while getting projects in postgres db",
       error,
     );
-    return res
-      .status(500)
-      .json({
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong in getProjects controller IN DB",
+      error,
+    });
+  }
+};
+
+// POST /projects/:projectId/invite
+exports.inviteUser = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { invited_user_id } = req.body;
+    if (!invited_user_id) {
+      return res.status(400).json({
         success: false,
-        message: "Something went wrong in getProjects controller IN DB",
-        error,
+        message: "User Id is required for invation",
       });
+    }
+
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        message: "Project Id is required for invation",
+      });
+    }
+    const projectData = await pool.query(
+      `
+            SELECT p.project_name as project_name,p.owner_id as owner_id
+            FROM projects p
+            WHERE p.id = $1
+
+            `,
+      [projectId],
+    );
+
+    if (!projectData.rows[0]) {
+      return res.status(404).json({
+        success: false,
+        message: "Project Not Found",
+      });
+    }
+    console.log(
+      "projectData.rows[0] response in projectController",
+      projectData.rows[0],
+    );
+    const ownerIdFromProjectData = projectData.rows[0].owner_id;
+    if (ownerIdFromProjectData !== req.headers["x-user-id"]) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to invite user in this project",
+      });
+    }
+
+    try {
+      console.log("Calling user service getme api..........");
+      const url = "http://user_service:5002/users/getme";
+      const userFind = await axios.get(url, {
+        headers: { "x-user-id": invited_user_id },
+      });
+      console.log("userFind Function Response ----=====------", userFind);
+      if (userFind.status !== 200) {
+        return res.status(404).json({
+          success: false,
+          message: "Requested User you are inviting Not Found",
+        });
+      }
+      console.log("Invited User Exits In Our MongDB✅");
+
+      console.log(
+        "Now Checking that this user is already invited in this project or not ..........",
+      );
+      const userAlreadyInvited = await pool.query(
+        `
+SELECT project_id,user_id FROM project_members
+WHERE user_id = $1 AND project_id = $2
+`,
+        [invited_user_id, projectId],
+      );
+
+      if (userAlreadyInvited.rows[0]) {
+        return res.status(400).json({
+          success: false,
+          message: "User is already a member of this project",
+        });
+      }
+
+      console.log("User is Not Invited in this project yet✅");
+
+      console.log(
+        "Now Checking That user is in the pending state of invite in this project or not ..........",
+      );
+
+      const userPendingInvite = await pool.query(
+        `
+              SELECT * FROM project_invites
+              WHERE project_id = $1 AND invited_user_id = $2 AND status = 'PENDING'
+              `,
+        [projectId, invited_user_id],
+      );
+
+      if (userPendingInvite.rows[0]) {
+        return res.status(400).json({
+          success: false,
+          message: "This user is already invited in this project",
+        });
+      }
+
+      console.log("User is Not Invited in this project yet✅");
+      console.log("Now Inviting User In This Project ..........");
+      console.log("Creating Invite In Project Invites Table ..........");
+      const finalRes = await pool.query(
+        `
+              INSERT INTO project_invites (project_id,invited_user_id,invited_by,status)
+              VALUES ($1,$2,$3,'PENDING')
+              RETURNING *
+              `,
+        [projectId, invited_user_id, req.headers["x-user-id"]],
+      );
+
+      console.log("Invite Created In Project Invites Table✅");
+      return res.status(201).json({
+        success: true,
+        message: "User Invited successfully In ApiGateway✅",
+        data: finalRes.rows,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Internal Server error in project Controller(Create Invite)",
+        error: error,
+      });
+    }
+  } catch (error) {
+    console.error(
+      "Error Occuered While Inviting User In Project Controller",
+      error,
+    );
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong in inviteUser controller",
+      error,
+    });
   }
 };

@@ -45,6 +45,7 @@ try {
 
 router.get('/getme',async(req,res) => {
     try {
+        console.log('Getting user In User Service.........');
         const userId = req.headers['x-user-id'];
         if(!userId){
             return res.status(400).json({

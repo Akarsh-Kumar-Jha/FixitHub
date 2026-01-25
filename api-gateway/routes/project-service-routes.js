@@ -59,6 +59,50 @@ router.get('/get-projects',authenticateUser,async(req,res) => {
             error
         });
     }
+});
+
+router.post('/invite/:projectId',async(req,res) => {
+    const projectId = req.params.projectId;
+    if(!projectId){
+        return res.status(400).json({
+            success:false,
+            message:"Project Id is required for invation",
+        });
+    };
+
+    const {invited_user_id } = req.body;
+
+    if(!invited_user_id){
+        return res.status(400).json({
+            success:false,
+            message:"User Id is required for invation",
+        });
+    };
+
+    try {
+
+        const url = 'http://project_service:5003/projects/invite/841b0cad-52e1-4038-b642-708033d4e191';
+        const axiosRes = await axios.post(url,{
+            invited_user_id
+        },{
+            headers:{'x-user-id':req.user.id}
+        });
+
+        return res.status(200).json({
+            success:true,
+            message:"User Invited successfully In ApiGateway✅",
+            data:axiosRes.data
+        });
+        
+    } catch (error) {
+        console.error('Error In Api Gateway while calling project service(Invite User)',error);
+        return res.status(500).json({
+            success:false,
+            message:"Something went wrong In ApiGateway Invite User call",
+            error
+        });
+    }
+
 })
 
 
