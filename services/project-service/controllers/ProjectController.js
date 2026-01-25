@@ -149,6 +149,7 @@ exports.inviteUser = async (req, res) => {
       projectData.rows[0],
     );
     const ownerIdFromProjectData = projectData.rows[0].owner_id;
+    console.log(`Checking ownerIdFromProjectData = ${ownerIdFromProjectData} with ${typeof(ownerIdFromProjectData)} type and req.headers["x-user-id"] = ${req.headers["x-user-id"]} with ${typeof(req.headers["x-user-id"])} type`);
     if (ownerIdFromProjectData !== req.headers["x-user-id"]) {
       return res.status(403).json({
         success: false,
@@ -247,3 +248,50 @@ WHERE user_id = $1 AND project_id = $2
     });
   }
 };
+
+
+exports.getAllInvites = async(req,res) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    console.log(`In GetALLInvites Controller userId = ${userId}`);
+    if(!userId){
+      return res.status(400).json({
+        success:false,
+        message:"User not Authenticated",
+      });
+    };
+
+    const allInvites = await pool.query(
+      `
+      SELECT pi.project_id as project_id,p.project_name as project_name,p.owner_id as owner_id,pi.status as project_status,p.created_at as project_created_at
+      FROM project_invites pi
+      INNER JOIN projects p
+      ON pi.project_id = p.id
+      WHERE pi.invited_user_id = $1
+      `,
+      [userId]
+    );
+
+    if(!allInvites.rows[0]){
+      return res.status(404).json({
+        success:false,
+        message:"No Invites Found",
+        data:[]
+      });
+    };
+
+
+    return res.status(200).json({
+      success:true,
+      message:"Invites Found✅",
+      data:allInvites.rows
+    });
+  } catch (error) {
+    console.error('error in getAllInvites',error);
+    return res.status(500).json({
+      success:false,
+      message:"Something went wrong in getAllInvites controller",
+      error
+    });
+  }
+}
