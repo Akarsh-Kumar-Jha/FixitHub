@@ -295,3 +295,279 @@ exports.getAllInvites = async(req,res) => {
     });
   }
 }
+
+exports.getAllSentInvites = async(req,res) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    if(!userId){
+      return res.status(400).json({
+        success:false,
+        message:"User not Authenticated",
+      });
+    };
+
+    const allSentInvites = await pool.query(
+      `
+      SELECT pi.id as invite_id ,pi.project_id,p.project_name as project_name,p.project_desc as project_description,pi.invited_user_id,pi.status as invite_status,pi.created_at as invite_created_at
+      FROM project_invites pi
+      INNER JOIN projects p
+      ON pi.project_id = p.id
+      WHERE pi.invited_by = $1
+      ORDER BY pi.created_at DESC
+      `,
+      [userId]
+    );
+
+    console.log('allSentInvites In getAllSentInvites Controller',allSentInvites.rows);
+
+    if(!allSentInvites.rowCount){
+      return res.status(404).json({
+        success:false,
+        message:"No Invites Found",
+        data:[]
+      });
+    };
+
+    if(allSentInvites.rowCount){
+      return res.status(200).json({
+        success:true,
+        message:"Invites Found✅",
+        data:allSentInvites.rows
+      });
+
+    }
+    
+  } catch (error) {
+    console.error('error occuered in getAllSentInvites controller',error);
+    return res.status(500).json({
+      success:false,
+      message:"Something went wrong in getAllSentInvites controller",
+      error
+    });
+  }
+}
+
+exports.getProjectMembers = async(req,res) => {
+  try {
+
+    const {projectId} = req.params;
+    if(!projectId){
+      return res.status(400).json({
+        success:false,
+        message:"Project Id is required",
+      });
+    };
+
+    // const userId = req.headers["x-user-id"];
+
+    // if(!userId){
+    //   return res.status(400).json({
+    //     success:false,
+    //     message:"User not Authenticated",
+    //   });
+    // };
+
+    const projectMembers = await pool.query(
+      `
+      SELECT pm.user_id as user_id,pm.role as user_role,p.project_name as project_name,p.project_desc as project_description,p.owner_id as owner_id
+      FROM project_members pm
+      INNER JOIN projects p
+      ON pm.project_id = p.id
+      WHERE pm.project_id = $1
+      `,
+      [projectId]
+    );
+
+    console.log('Project Members In projectMembers Controller',projectMembers.rows);
+
+    if(projectMembers.rowCount == 0){
+      return res.status(400).json({
+        success:false,
+        message:"No Members Found",
+        data:[]
+      });
+    }
+
+    return res.status(200).json({
+      success:true,
+      message:"Members Found✅",
+      data:projectMembers.rows
+    });
+    
+  } catch (error) {
+    console.error('error occuered in getProjectMembers controller',error);
+    return res.status(500).json({
+      success:false,
+      message:"Something went wrong in getProjectMembers controller",
+      error
+    });
+  }
+}
+
+
+exports.acceptInvite = async(req,res) => {
+  try {
+    //POST /invites/:inviteId/accept
+    const {inviteId} = req.params;
+    const userId = req.headers["x-user-id"];
+
+    if(!inviteId){
+      return res.status(400).json({
+        success:false,
+        message:"Invite Id is required",
+      });
+    };
+console.log('In AcceptInvite Controller userId',userId);
+    if(!userId){
+      return res.status(400).json({
+        success:false,
+        message:"User not Authenticated",
+      });
+    }
+
+    const inviteData = await pool.query(
+      `
+      SELECT * FROM project_invites
+      WHERE id = $1
+      `,
+      [inviteId]
+    );
+
+    console.log('In AcceptInvite Controller inviteData According to inviteId',inviteData.rows);
+
+
+    if(!inviteData.rows[0]){
+      return res.status(404).json({
+        success:false,
+        message:"Invite Not Found",
+      });
+    };
+
+
+    if(inviteData.rows[0].status !== "PENDING"){
+      return res.status(400).json({
+        success:false,
+        message:"Invite Already Accepted or Rejected",
+      });
+     };
+
+     if(inviteData.rows[0].invited_user_id !== userId){
+      return res.status(400).json({
+        success:false,
+        message:"You are not invited to this project",
+      });
+     };
+
+     await pool.query('BEGIN');
+
+    const projectMember = await pool.query(
+      `
+      INSERT INTO project_members (project_id,user_id,role)
+      VALUES ($1,$2,'MEMBER')
+      RETURNING *
+      `,
+      [inviteData.rows[0].project_id,userId]
+     );
+
+     const updatedInvite = await pool.query(
+      `
+      UPDATE project_invites
+      SET status = 'ACCEPTED'
+      WHERE id = $1
+      `,
+      [inviteId]
+     );
+
+     await pool.query('COMMIT');
+
+     return res.status(200).json({
+      success:true,
+      message:"Invite Accepted✅",
+      updatedInvite:updatedInvite.rows[0],
+      updatedMembers:projectMember.rows
+     });
+    
+  } catch (error) {
+    console.error('error occuered in acceptInvite controller',error);
+    pool.query('ROLLBACK');
+    return res.status(500).json({
+      success:false,
+      message:"Something went wrong in acceptInvite controller",
+      error
+    })
+  }
+}
+
+exports.rejectInvite = async(req,res) => {
+  try {
+    const {inviteId} = req.params;
+    const userId = req.headers["x-user-id"];
+
+    if(!inviteId){
+      return res.status(400).json({
+        success:false,
+        message:"Invite Id is required",
+      });
+    };
+
+    if(!userId){
+      return res.status(400).json({
+        success:false,
+        message:"User not Authenticated",
+      });
+    };
+
+    const InviteData = await pool.query(
+      `
+      SELECT * FROM project_invites
+      WHERE id = $1      
+      `,
+      [inviteId]
+    );
+
+    if(InviteData.rowCount == 0){
+      return res.status(404).json({
+        success:false,
+        message:"Invite Not Found",
+      });
+    };
+
+    if(InviteData.rows[0].invited_user_id !== userId){
+      return res.status(400).json({
+        success:false,
+        message:"You are not invited to this project",
+      });
+    };
+
+    if(InviteData.rows[0].status !== "PENDING"){
+      return res.status(400).json({
+        success:false,
+        message:"Invite Already Accepted or Rejected",
+      });
+    };
+
+
+    const updatedInviteData = await pool.query(
+      `
+      UPDATE project_invites
+      SET status = 'REJECTED'
+      WHERE id = $1
+      `,
+      [inviteId]
+    );
+
+    return res.status(200).json({
+      success:true,
+      message:"Invite Rejected✅",
+      updatedInvite:updatedInviteData.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('error occuered in rejectInvite controller',error);
+    return res.status(500).json({
+      success:false,
+      message:"Something went wrong in rejectInvite controller",
+      error
+    });
+  }
+}
